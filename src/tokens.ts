@@ -3,6 +3,8 @@ export enum TokenType {
     EndBlock = "}",
     BeginParen = "(",
     EndParen = ")",
+    BeginBracket = "[",
+    EndBracket = "]",
     Value = "VALUE",
     EOF = "EOF",
 }

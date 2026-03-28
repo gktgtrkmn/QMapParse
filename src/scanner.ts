@@ -10,7 +10,7 @@ export class MapScanner {
 
     private tokenize(source: string) {
         const cleanSource = source.replace(/\/\/.*$/gm, "");
-        const regex = /"[^"]*"|[(){}]|[^\s(){}]+/g;
+        const regex = /"[^"]*"|[()[\]{}]|[^\s()[\]{}]+/g;
         const matches = cleanSource.match(regex) || [];
 
         for (const match of matches) {
@@ -25,6 +25,10 @@ export class MapScanner {
                 type = TokenType.BeginParen;
             } else if (match === ")") {
                 type = TokenType.EndParen;
+            } else if (match === "[") {
+                type = TokenType.BeginBracket;
+            } else if (match === "]") {
+                type = TokenType.EndBracket;
             } else {
                 lexeme = lexeme.replace(/^["“”]+|["“”]+$/g, "");
             }
