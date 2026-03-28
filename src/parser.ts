@@ -1,6 +1,6 @@
 import { MapScanner } from "./scanner.ts";
 import { TokenType } from "./tokens.ts";
-import type { MapData, Entity, Brush, Plane, Vector3 } from "./types.ts";
+import type { MapData, Entity, Brush, Plane, Vector3, ValveAxis } from "./types.ts";
 
 export class QuakeMapParser {
     private scanner: MapScanner;
@@ -55,13 +55,51 @@ export class QuakeMapParser {
         const p3 = this.parsePoint();
 
         const texture = this.scanner.consume(TokenType.Value, "Expected texture name").lexeme;
-        const xOff = parseFloat(this.scanner.consume(TokenType.Value, "Expected x-offset").lexeme);
-        const yOff = parseFloat(this.scanner.consume(TokenType.Value, "Expected y-offset").lexeme);
+        
+        const isValve = this.scanner.peek().type === TokenType.BeginBracket;
+        
+        type FormatData = 
+            | { type: "legacy"; xOff: number; yOff: number }
+            | { type: "valve"; uAxis: ValveAxis; vAxis: ValveAxis };
+        
+        let formatData: FormatData;
+
+        if (isValve) {
+            formatData = {
+                type: "valve",
+                uAxis: this.parseValveAxis(),
+                vAxis: this.parseValveAxis(),
+            };
+        } else {
+            formatData = {
+                type: "legacy",
+                xOff: parseFloat(this.scanner.consume(TokenType.Value, "Expected x-offset").lexeme),
+                yOff: parseFloat(this.scanner.consume(TokenType.Value, "Expected y-offset").lexeme),
+            }
+        }
+        
         const rotation = parseFloat(this.scanner.consume(TokenType.Value, "Expected rotation").lexeme);
         const xScale = parseFloat(this.scanner.consume(TokenType.Value, "Expected x-scale").lexeme);
         const yScale = parseFloat(this.scanner.consume(TokenType.Value, "Expected y-scale").lexeme);
 
-        return { p1, p2, p3, texture, xOff, yOff, rotation, xScale, yScale };
+        return {
+            p1, p2, p3, texture,
+            ...formatData,
+            rotation, xScale, yScale
+        } as Plane;
+    }
+
+    private parseValveAxis(): ValveAxis {
+        this.scanner.consume(TokenType.BeginBracket, "Expected '[' for Valve UV axis");
+
+        const x = parseFloat(this.scanner.consume(TokenType.Value, "Expected U/V X axis").lexeme);
+        const y = parseFloat(this.scanner.consume(TokenType.Value, "Expected U/V Y axis").lexeme);
+        const z = parseFloat(this.scanner.consume(TokenType.Value, "Expected U/V Z axis").lexeme);
+        const offset = parseFloat(this.scanner.consume(TokenType.Value, "Expected U/V offset").lexeme);        
+        
+        this.scanner.consume(TokenType.EndBracket, "Expected ']' for Valve UV axis");
+
+        return { vector: [x, y, z], offset };
     }
 
     private parsePoint(): Vector3 {
