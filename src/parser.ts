@@ -1,14 +1,31 @@
+/**
+ * Core parsing logic for converting raw map text into an Abstract Syntax Tree.
+ * @module
+ */
+
 import { MapScanner } from "./scanner.ts";
 import { TokenType } from "./tokens.ts";
 import type { MapData, Entity, Brush, Plane, Vector3, ValveAxis } from "./types.ts";
 
+/**
+ * A Recursive Descent parser that processes a stream of tokens into a structured `MapData` AST.
+ * Supports both legacy Quake and modern Valve 220 plane formats.
+ */
 export class QuakeMapParser {
     private scanner: MapScanner;
 
+    /**
+   * Initializes a new parser instance.
+   * @param source The raw string text of the `.map` file.
+   */
     constructor(source: string) {
         this.scanner = new MapScanner(source);
     }
 
+    /**
+   * Consumes the entire token stream and constructs the root AST.
+   * @returns {MapData} The fully parsed representation of the map.
+   */
     public parseMap(): MapData {
         const entities: Entity[] = [];
         while (!this.scanner.isAtEnd()) {
@@ -17,6 +34,10 @@ export class QuakeMapParser {
         return { entities };
     }
 
+    /**
+   * Parses a single Entity, including its key-value properties and any attached CSG brushes.
+   * @private
+   */
     private parseEntity(): Entity {
         this.scanner.consume(TokenType.BeginBlock, "Expected '{' at start of entity");
 
@@ -37,6 +58,10 @@ export class QuakeMapParser {
         return { properties, brushes };
     }
 
+    /**
+   * Parses a single CSG Brush consisting of multiple intersecting planes.
+   * @private
+   */
     private parseBrush(): Brush {
         this.scanner.consume(TokenType.BeginBlock, "Expected '{' at start of brush");
         const planes: Plane[] = [];
@@ -49,6 +74,11 @@ export class QuakeMapParser {
         return { planes };
     }
 
+    /**
+   * Parses a single flat plane. Dynamically branches to support both
+   * Legacy offsets and Valve 220 UV axes based on token lookahead.
+   * @private
+   */
     private parsePlane(): Plane {
         const p1 = this.parsePoint();
         const p2 = this.parsePoint();
@@ -89,6 +119,10 @@ export class QuakeMapParser {
         } as Plane;
     }
 
+    /**
+   * Parses a Valve 220 texture projection axis wrapped in brackets: `[ X Y Z Offset ]`
+   * @private
+   */
     private parseValveAxis(): ValveAxis {
         this.scanner.consume(TokenType.BeginBracket, "Expected '[' for Valve UV axis");
 
@@ -102,6 +136,10 @@ export class QuakeMapParser {
         return { vector: [x, y, z], offset };
     }
 
+    /**
+   * Parses a standard 3D coordinate point wrapped in parentheses: `( X Y Z )`
+   * @private
+   */
     private parsePoint(): Vector3 {
         this.scanner.consume(TokenType.BeginParen, "Expected '(' for point coordinate");
     
